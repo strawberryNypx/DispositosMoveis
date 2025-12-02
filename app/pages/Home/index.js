@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Icon } from '@react-native-vector-icons/feather';
 import { getBalance } from '../../services/getBalanceService';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { useState } from 'react';
-
+import { Calendar } from 'react-native-calendars';
+import CalendarIcon from '../../../assets/calendar.png';
+import styles from './styles.js';
 
 export default function Home() {
 
@@ -36,128 +36,86 @@ export default function Home() {
 
     fetchBalance();
   }, []);
+
+  const [showCalendar, setShowCalendar] = useState(false);
+
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal={true}
-        showsHorizontalScrollIndicator={false}
-        style={styles.scrollViewHorizontal}
-        contentContainerStyle={styles.contentContainer}
-      >
+      <View>
+        <ScrollView
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          style={styles.scrollViewHorizontal}
+          contentContainerStyle={styles.contentContainer}
+        >
 
-        <View style={styles.square1}>
-          <Text style={styles.squareText1}>Saldo atual</Text>
-          <Text style={styles.squareTextDetails1}>R$ {balanceData.balance}</Text>
-        </View>
+          <View style={styles.square1}>
+            <Text style={styles.squareText1}>Saldo atual</Text>
+            <Text style={styles.squareTextDetails1}>R$ {balanceData.balance}</Text>
+          </View>
 
-        <View style={styles.square2}>
-          <Text style={styles.squareText2}>Entradas de hoje</Text>
-          <Text style={styles.squareTextDetails2}>R$ {balanceData.entries}</Text>
-        </View>
+          <View style={styles.square2}>
+            <Text style={styles.squareText2}>Entradas de hoje</Text>
+            <Text style={styles.squareTextDetails2}>R$ {balanceData.entries}</Text>
+          </View>
 
 
-        <View style={styles.square3}>
-          <Text style={styles.squareText3}>Saidas de hoje</Text>
-          <Text style={styles.squareTextDetails3}>R$ {balanceData.exits}</Text>
-        </View>
-      </ScrollView>
+          <View style={styles.square3}>
+            <Text style={styles.squareText3}>Saidas de hoje</Text>
+            <Text style={styles.squareTextDetails3}>R$ {balanceData.exits}</Text>
+          </View>
+        </ScrollView>
+      </View>
+
+
+
+      <View>
+        <TouchableOpacity
+          style={styles.fixedButton}
+          onPress={() => setShowCalendar(!showCalendar)}
+        >
+          <Image
+            source={CalendarIcon}
+            style={styles.icon}
+          />
+          <Text style={styles.buttonText}>Últimas movimentações</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        {/* Modal do calendário */}
+        <Modal
+          transparent
+          visible={showCalendar}
+          animationType="fade"
+        >
+          <TouchableWithoutFeedback onPress={() => setShowCalendar(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.calendarContainer}>
+                  <Calendar
+                    onDayPress={(day) => {
+                      console.log('Dia selecionado:', day.dateString);
+                      setShowCalendar(false);
+                    }}
+                    style={styles.calendar}
+                  />
+                  <TouchableOpacity
+                    style={styles.calendarButton}
+                    onPress={() => {
+                      console.log('Botão dentro do calendário');
+                    }}
+                  >
+                    <Text style={styles.calendarButtonText}>Filtrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+
+      </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f5',
-  },
-  scrollViewHorizontal: {
-    height: 160,
-    marginTop: 10,
-  },
-  contentContainer: {
-    paddingHorizontal: 15,
-  },
-  square1: {
-    width: 305,
-    height: 136,
-    backgroundColor: '#3B3DBF',
-    borderRadius: 8,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  square2: {
-    width: 305,
-    height: 136,
-    backgroundColor: '#00B94A',
-    borderRadius: 8,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  square3: {
-    width: 305,
-    height: 136,
-    backgroundColor: '#EF463A',
-    borderRadius: 8,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  squareText1: {
-    paddingTop: 30,
-    paddingLeft: 20,
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    lineHeight: 18,
-    letterSpacing: 0
-  },
-  squareText2: {
-    paddingTop: 30,
-    paddingLeft: 20,
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    lineHeight: 18,
-    letterSpacing: 0
-  },
-  squareText3: {
-    paddingTop: 30,
-    paddingLeft: 20,
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    lineHeight: 18,
-    letterSpacing: 0
-  },
-  squareTextDetails1: {
-    paddingTop: 5,
-    paddingLeft: 20,
-    fontSize: 33,
-    color: '#FFFFFF'
-  },
-  squareTextDetails2: {
-    paddingTop: 5,
-    paddingLeft: 20,
-    fontSize: 33,
-    color: '#FFFFFF'
-  },
-  squareTextDetails3: {
-    paddingTop: 5,
-    paddingLeft: 20,
-    fontSize: 33,
-    color: '#FFFFFF'
-  },
-
-
-});
