@@ -18,7 +18,6 @@ export default function Home() {
     async function fetchBalance() {
       try {
         const dataArray = await getBalance();
-        ag
         const currentBalance = dataArray.find(item => item.tag === 'saldo')?.saldo || 0;
         const currentEntries = dataArray.find(item => item.tag === 'receita')?.saldo || 0;
         const currentExits = dataArray.find(item => item.tag === 'despesa')?.saldo || 0;
