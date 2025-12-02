@@ -139,6 +139,46 @@ export default StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-
-
+  card: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    marginHorizontal: 16,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badgeReceita: {
+    backgroundColor: '#4CAF50',
+  },
+  badgeDespesa: {
+    backgroundColor: '#f44336',
+  },
+  badgeIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 6,
+    color: 'white',
+  },
+  badgeText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  value: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  listContainer: {
+    backgroundColor: '#ffffff',
+    height: '100%',
+  },
 });

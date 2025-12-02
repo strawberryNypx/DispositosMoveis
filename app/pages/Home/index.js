@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { Calendar } from 'react-native-calendars';
 import CalendarIcon from '../../../assets/calendar.png';
 import styles from './styles.js';
+import { getRecives } from '../../services/getRecivesService.js';
+import SetaParaCima from '../../../assets/setaparacimabranca.png';
+import SetaParaBaixo from '../../../assets/setaparabaixobranca.png';
 
 export default function Home() {
 
@@ -37,7 +40,21 @@ export default function Home() {
     fetchBalance();
   }, []);
 
+  const [items, setItems] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
+
+  useEffect(() => {
+    async function loadItems() {
+      try {
+        const data = await getRecives();
+        setItems(data);
+      } catch (error) {
+        console.log("Erro ao buscar itens:", error);
+      }
+    }
+
+    loadItems();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -69,7 +86,7 @@ export default function Home() {
 
 
 
-      <View>
+      <View style={styles.listContainer}>
         <TouchableOpacity
           style={styles.fixedButton}
           onPress={() => setShowCalendar(!showCalendar)}
@@ -80,10 +97,36 @@ export default function Home() {
           />
           <Text style={styles.buttonText}>Últimas movimentações</Text>
         </TouchableOpacity>
+        <View>
+
+          {items.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <View
+                style={[
+                  styles.badge,
+                  item.type === 'receita' ? styles.badgeReceita : styles.badgeDespesa
+                ]}
+              >
+                <Image
+                  source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
+                  style={styles.badgeIcon}
+                />
+                <Text style={styles.badgeText}>
+                  {item.type}
+                </Text>
+              </View>
+
+              <Text style={styles.value}>
+                R$ {Number(item.value).toFixed(2).replace('.', ',')}
+              </Text>
+            </View>
+          ))}
+
+        </View>
+
       </View>
 
       <View style={{ flex: 1 }}>
-        {/* Modal do calendário */}
         <Modal
           transparent
           visible={showCalendar}
