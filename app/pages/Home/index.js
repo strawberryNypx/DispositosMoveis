@@ -8,6 +8,8 @@ import styles from './styles.js';
 import { getRecives } from '../../services/getRecivesService.js';
 import SetaParaCima from '../../../assets/setaparacimabranca.png';
 import SetaParaBaixo from '../../../assets/setaparabaixobranca.png';
+import { deleteReceive } from '../../services/deleteRecivesService';
+
 
 export default function Home() {
 
@@ -40,29 +42,32 @@ export default function Home() {
 
   const [items, setItems] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
- 
+
   const [selectedDate, setSelectedDate] = useState('');
-  
   const [filteredDate, setFilteredDate] = useState('');
+
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
 
   useEffect(() => {
     async function loadItems() {
       try {
         const data = await getRecives();
         setItems(data);
- 
+
         const today = new Date();
         const day = String(today.getDate()).padStart(2, '0');
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const year = today.getFullYear();
-        const todayFormatted = `${day}/${month}/${year}`; 
-        
+        const todayFormatted = `${day}/${month}/${year}`;
+
         console.log('Data de hoje:', todayFormatted);
-        
-       
+
+
         const todaysItems = data.filter(item => item.date === todayFormatted);
         console.log('Itens de hoje:', todaysItems);
-        
+
       } catch (error) {
         console.log("Erro ao buscar itens:", error);
       }
@@ -72,7 +77,7 @@ export default function Home() {
 
 
   const convertDateToBrazilian = (dateString) => {
-    
+
     const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
   };
@@ -86,17 +91,30 @@ export default function Home() {
   };
 
   const handleFilter = () => {
-    console.log('Data selecionada:', selectedDate); 
-    console.log('Data convertida:', convertDateToBrazilian(selectedDate)); 
-    
-  
+    console.log('Data selecionada:', selectedDate);
+    console.log('Data convertida:', convertDateToBrazilian(selectedDate));
+
+
     setFilteredDate(selectedDate);
     setShowCalendar(false);
   };
 
   const clearFilter = () => {
-    setFilteredDate(''); 
-    setSelectedDate(''); 
+    setFilteredDate('');
+    setSelectedDate('');
+  };
+
+
+  const confirmDelete = async () => {
+    try {
+      await deleteReceive(selectedItem.id);
+
+      setItems(prev => prev.filter(i => i.id !== selectedItem.id));
+
+      setDeleteModalVisible(false);
+    } catch (error) {
+      console.log("Erro ao deletar item:", error);
+    }
   };
 
   return (
@@ -138,7 +156,7 @@ export default function Home() {
             />
             <Text style={styles.buttonText}>Últimas movimentações</Text>
           </TouchableOpacity>
-          
+
           {filteredDate && (
             <TouchableOpacity
               onPress={clearFilter}
@@ -148,17 +166,6 @@ export default function Home() {
             </TouchableOpacity>
           )}
         </View>
-
-        {filteredDate ? (
-          <Text style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>
-            Mostrando itens de: {convertDateToBrazilian(filteredDate)}
-          </Text>
-        ) : (
-          <Text style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>
-            Mostrando itens de hoje: {getTodayBrazilian()}
-          </Text>
-        )}
-
         <View>
           {items
             .filter(item => {
@@ -168,34 +175,43 @@ export default function Home() {
               return item.date === getTodayBrazilian();
             })
             .map((item) => (
-              <View key={item.id} style={styles.card}>
-                <View
-                  style={[
-                    styles.badge,
-                    item.type === 'receita' ? styles.badgeReceita : styles.badgeDespesa
-                  ]}
-                >
-                  <Image
-                    source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
-                    style={styles.badgeIcon}
-                  />
-                  <Text style={styles.badgeText}>
-                    {item.type}
+              <TouchableOpacity
+                key={item.id}
+                onLongPress={() => {
+                  setSelectedItem(item);
+                  setDeleteModalVisible(true);
+                }}
+                delayLongPress={400}
+              >
+                <View style={styles.card}>
+                  <View
+                    style={[
+                      styles.badge,
+                      item.type === 'receita' ? styles.badgeReceita : styles.badgeDespesa
+                    ]}
+                  >
+                    <Image
+                      source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
+                      style={styles.badgeIcon}
+                    />
+                    <Text style={styles.badgeText}>
+                      {item.type}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.value}>
+                    R$ {Number(item.value).toFixed(2).replace('.', ',')}
                   </Text>
                 </View>
-
-                <Text style={styles.value}>
-                  R$ {Number(item.value).toFixed(2).replace('.', ',')}
-                </Text>
-              </View>
+              </TouchableOpacity>
             ))}
-            
+
           {filteredDate && items.filter(item => item.date === convertDateToBrazilian(filteredDate)).length === 0 && (
             <Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>
               Nenhuma movimentação encontrada para esta data
             </Text>
           )}
-          
+
           {!filteredDate && items.filter(item => item.date === getTodayBrazilian()).length === 0 && (
             <Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>
               Nenhuma movimentação hoje
@@ -240,6 +256,45 @@ export default function Home() {
           </TouchableWithoutFeedback>
         </Modal>
       </View>
+      <Modal
+        transparent
+        visible={deleteModalVisible}
+        animationType="fade"
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <View style={{
+            backgroundColor: 'white',
+            padding: 20,
+            width: '80%',
+            borderRadius: 10
+          }}>
+            <Text style={{ fontSize: 18, marginBottom: 20, textAlign: 'center' }}>
+              Deseja deletar esta movimentação?
+            </Text>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={{ padding: 10, backgroundColor: '#e53935', borderRadius: 8, width: '45%' }}
+                onPress={confirmDelete}
+              >
+                <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>Sim</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ padding: 10, backgroundColor: '#bdbdbd', borderRadius: 8, width: '45%' }}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={{ color: 'black', textAlign: 'center', fontWeight: 'bold' }}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
