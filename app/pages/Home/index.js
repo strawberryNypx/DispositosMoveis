@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getBalance } from '../../services/getBalanceService';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
-import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import CalendarIcon from '../../../assets/calendar.png';
 import styles from './styles.js';
@@ -11,9 +10,7 @@ import SetaParaBaixo from '../../../assets/setaparabaixobranca.png';
 import { deleteReceive } from '../../services/deleteRecivesService';
 import { useIsFocused } from '@react-navigation/native';
 
-
 export default function Home() {
-
   const isFocused = useIsFocused();
 
   const [balanceData, setBalanceData] = useState({
@@ -21,69 +18,15 @@ export default function Home() {
     entries: 0.00,
     exits: 0.00,
   });
-  
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const dataArray = await getBalance();
-        const currentBalance = dataArray.find(item => item.tag === 'saldo')?.saldo || 0;
-        const currentEntries = dataArray.find(item => item.tag === 'receita')?.saldo || 0;
-        const currentExits = dataArray.find(item => item.tag === 'despesa')?.saldo || 0;
-
-        setBalanceData({
-          balance: currentBalance,
-          entries: currentEntries,
-          exits: currentExits,
-        });
-      } catch (error) {
-        console.error("Erro ao buscar o balanço:", error);
-      }
-    }
-
-    fetchBalance();
-  }, []);
 
   const [items, setItems] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
-
   const [selectedDate, setSelectedDate] = useState('');
   const [filteredDate, setFilteredDate] = useState('');
-
   const [selectedItem, setSelectedItem] = useState(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-
-useEffect(() => {
-  async function loadItems() {
-    try {
-      const data = await getRecives();
-      setItems(data);
-
-      const today = new Date();
-      const day = String(today.getDate()).padStart(2, '0');
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const year = today.getFullYear();
-      const todayFormatted = `${day}/${month}/${year}`;
-
-      console.log('Data de hoje:', todayFormatted);
-
-      const todaysItems = data.filter(item => item.date === todayFormatted);
-      console.log('Itens de hoje:', todaysItems);
-
-    } catch (error) {
-      console.log("Erro ao buscar itens:", error);
-    }
-  }
-
-  if (isFocused) {
-    loadItems();
-  }
-}, [isFocused]);
-
-
-
   const convertDateToBrazilian = (dateString) => {
-
     const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
   };
@@ -97,10 +40,6 @@ useEffect(() => {
   };
 
   const handleFilter = () => {
-    console.log('Data selecionada:', selectedDate);
-    console.log('Data convertida:', convertDateToBrazilian(selectedDate));
-
-
     setFilteredDate(selectedDate);
     setShowCalendar(false);
   };
@@ -110,18 +49,73 @@ useEffect(() => {
     setSelectedDate('');
   };
 
-
   const confirmDelete = async () => {
     try {
       await deleteReceive(selectedItem.id);
 
-      setItems(prev => prev.filter(i => i.id !== selectedItem.id));
+      const updatedItems = items.filter(i => i.id !== selectedItem.id);
+      setItems(updatedItems);
+
+      const today = getTodayBrazilian();
+      const todaysItems = updatedItems.filter(item => item.date === today);
+
+      const todaysEntries = todaysItems
+        .filter(item => item.type === 'receita')
+        .reduce((sum, item) => sum + Number(item.value), 0);
+
+      const todaysExits = todaysItems
+        .filter(item => item.type === 'despesa')
+        .reduce((sum, item) => sum + Number(item.value), 0);
+
+      setBalanceData(prev => ({
+        ...prev,
+        entries: todaysEntries.toFixed(2),
+        exits: todaysExits.toFixed(2)
+      }));
 
       setDeleteModalVisible(false);
+      console.log('✅ Item deletado e balance atualizado!');
+      
     } catch (error) {
       console.log("Erro ao deletar item:", error);
     }
   };
+
+  useEffect(() => {
+    async function loadAllData() {
+      if (!isFocused) return;
+
+      try {
+        const data = await getRecives();
+        setItems(data);
+
+        const dataArray = await getBalance();
+        const currentBalance = dataArray.find(item => item.tag === 'saldo')?.saldo || 0;
+
+        const today = getTodayBrazilian();
+        const todaysItems = data.filter(item => item.date === today);
+
+        const todaysEntries = todaysItems
+          .filter(item => item.type === 'receita')
+          .reduce((sum, item) => sum + Number(item.value), 0);
+
+        const todaysExits = todaysItems
+          .filter(item => item.type === 'despesa')
+          .reduce((sum, item) => sum + Number(item.value), 0);
+
+        setBalanceData({
+          balance: currentBalance,
+          entries: todaysEntries.toFixed(2),
+          exits: todaysExits.toFixed(2)
+        });
+
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      }
+    }
+
+    loadAllData();
+  }, [isFocused]);
 
   return (
     <View style={styles.container}>
@@ -132,7 +126,6 @@ useEffect(() => {
           style={styles.scrollViewHorizontal}
           contentContainerStyle={styles.contentContainer}
         >
-
           <View style={styles.square1}>
             <Text style={styles.squareText1}>Saldo atual</Text>
             <Text style={styles.squareTextDetails1}>R$ {balanceData.balance}</Text>
@@ -156,10 +149,7 @@ useEffect(() => {
             style={styles.fixedButton}
             onPress={() => setShowCalendar(!showCalendar)}
           >
-            <Image
-              source={CalendarIcon}
-              style={styles.icon}
-            />
+            <Image source={CalendarIcon} style={styles.icon} />
             <Text style={styles.buttonText}>Últimas movimentações</Text>
           </TouchableOpacity>
 
@@ -172,6 +162,7 @@ useEffect(() => {
             </TouchableOpacity>
           )}
         </View>
+
         <View>
           {items
             .filter(item => {
@@ -200,11 +191,8 @@ useEffect(() => {
                       source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
                       style={styles.badgeIcon}
                     />
-                    <Text style={styles.badgeText}>
-                      {item.type}
-                    </Text>
+                    <Text style={styles.badgeText}>{item.type}</Text>
                   </View>
-
                   <Text style={styles.value}>
                     R$ {Number(item.value).toFixed(2).replace('.', ',')}
                   </Text>
@@ -226,63 +214,37 @@ useEffect(() => {
         </View>
       </View>
 
-      <View style={{ flex: 1 }}>
-        <Modal
-          transparent
-          visible={showCalendar}
-          animationType="fade"
-        >
-          <TouchableWithoutFeedback onPress={() => setShowCalendar(false)}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback>
-                <View style={styles.calendarContainer}>
-                  <Calendar
-                    onDayPress={(day) => {
-                      setSelectedDate(day.dateString);
-                      console.log('Data selecionada no calendário:', day.dateString);
-                    }}
-                    markedDates={{
-                      [selectedDate]: {
-                        selected: true,
-                        selectedColor: '#4a90e2',
-                        selectedTextColor: 'white'
-                      }
-                    }}
-                    style={styles.calendar}
-                  />
-                  <TouchableOpacity
-                    style={styles.calendarButton}
-                    onPress={handleFilter}
-                  >
-                    <Text style={styles.calendarButtonText}>Filtrar</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
-      </View>
-      <Modal
-        transparent
-        visible={deleteModalVisible}
-        animationType="fade"
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <View style={{
-            backgroundColor: 'white',
-            padding: 20,
-            width: '80%',
-            borderRadius: 10
-          }}>
+      <Modal transparent visible={showCalendar} animationType="fade">
+        <TouchableWithoutFeedback onPress={() => setShowCalendar(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.calendarContainer}>
+                <Calendar
+                  onDayPress={(day) => setSelectedDate(day.dateString)}
+                  markedDates={{
+                    [selectedDate]: {
+                      selected: true,
+                      selectedColor: '#4a90e2',
+                      selectedTextColor: 'white'
+                    }
+                  }}
+                  style={styles.calendar}
+                />
+                <TouchableOpacity style={styles.calendarButton} onPress={handleFilter}>
+                  <Text style={styles.calendarButtonText}>Filtrar</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <Modal transparent visible={deleteModalVisible} animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 20, width: '80%', borderRadius: 10 }}>
             <Text style={{ fontSize: 18, marginBottom: 20, textAlign: 'center' }}>
               Deseja deletar esta movimentação?
             </Text>
-
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <TouchableOpacity
                 style={{ padding: 10, backgroundColor: '#e53935', borderRadius: 8, width: '45%' }}
@@ -290,7 +252,6 @@ useEffect(() => {
               >
                 <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>Sim</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={{ padding: 10, backgroundColor: '#bdbdbd', borderRadius: 8, width: '45%' }}
                 onPress={() => setDeleteModalVisible(false)}
@@ -302,5 +263,5 @@ useEffect(() => {
         </View>
       </Modal>
     </View>
-  )
+  );
 }
