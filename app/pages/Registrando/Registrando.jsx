@@ -3,9 +3,13 @@ import { View, Text, TouchableOpacity, Image, TextInput } from 'react-native';
 import SetaParaCima from '../../../assets/arrow-up.png';
 import SetaParaBaixo from '../../../assets/arrow-down.png';
 import styles from './style';
-import {postRecive} from '../../services/postReciveService';
+import { postRecive } from '../../services/postReciveService';
+import { useNavigation } from '@react-navigation/native';
+
 
 export default function Registro() {
+  const navigation = useNavigation();
+
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [type, setType] = useState('receita');
@@ -27,6 +31,12 @@ export default function Registro() {
 
       await postRecive(data);
       console.log("Registrado com sucesso!");
+      
+      setDescription('');
+      setValue('');
+      
+      navigation.navigate('Home');
+      
     } catch (error) {
       console.log("Erro ao registrar:", error);
     }

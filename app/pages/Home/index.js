@@ -9,16 +9,19 @@ import { getRecives } from '../../services/getRecivesService.js';
 import SetaParaCima from '../../../assets/setaparacimabranca.png';
 import SetaParaBaixo from '../../../assets/setaparabaixobranca.png';
 import { deleteReceive } from '../../services/deleteRecivesService';
+import { useIsFocused } from '@react-navigation/native';
 
 
 export default function Home() {
+
+  const isFocused = useIsFocused();
 
   const [balanceData, setBalanceData] = useState({
     balance: 0.00,
     entries: 0.00,
     exits: 0.00,
   });
-
+  
   useEffect(() => {
     async function fetchBalance() {
       try {
@@ -50,30 +53,33 @@ export default function Home() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
 
-  useEffect(() => {
-    async function loadItems() {
-      try {
-        const data = await getRecives();
-        setItems(data);
+useEffect(() => {
+  async function loadItems() {
+    try {
+      const data = await getRecives();
+      setItems(data);
 
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const year = today.getFullYear();
-        const todayFormatted = `${day}/${month}/${year}`;
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const todayFormatted = `${day}/${month}/${year}`;
 
-        console.log('Data de hoje:', todayFormatted);
+      console.log('Data de hoje:', todayFormatted);
 
+      const todaysItems = data.filter(item => item.date === todayFormatted);
+      console.log('Itens de hoje:', todaysItems);
 
-        const todaysItems = data.filter(item => item.date === todayFormatted);
-        console.log('Itens de hoje:', todaysItems);
-
-      } catch (error) {
-        console.log("Erro ao buscar itens:", error);
-      }
+    } catch (error) {
+      console.log("Erro ao buscar itens:", error);
     }
+  }
+
+  if (isFocused) {
     loadItems();
-  }, []);
+  }
+}, [isFocused]);
+
 
 
   const convertDateToBrazilian = (dateString) => {
