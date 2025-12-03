@@ -30,8 +30,6 @@ export default function Home() {
           entries: currentEntries,
           exits: currentExits,
         });
-
-
       } catch (error) {
         console.error("Erro ao buscar o balanço:", error);
       }
@@ -42,19 +40,64 @@ export default function Home() {
 
   const [items, setItems] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
+ 
+  const [selectedDate, setSelectedDate] = useState('');
+  
+  const [filteredDate, setFilteredDate] = useState('');
 
   useEffect(() => {
     async function loadItems() {
       try {
         const data = await getRecives();
         setItems(data);
+ 
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        const todayFormatted = `${day}/${month}/${year}`; 
+        
+        console.log('Data de hoje:', todayFormatted);
+        
+       
+        const todaysItems = data.filter(item => item.date === todayFormatted);
+        console.log('Itens de hoje:', todaysItems);
+        
       } catch (error) {
         console.log("Erro ao buscar itens:", error);
       }
     }
-
     loadItems();
   }, []);
+
+
+  const convertDateToBrazilian = (dateString) => {
+    
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const getTodayBrazilian = () => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleFilter = () => {
+    console.log('Data selecionada:', selectedDate); 
+    console.log('Data convertida:', convertDateToBrazilian(selectedDate)); 
+    
+  
+    setFilteredDate(selectedDate);
+    setShowCalendar(false);
+  };
+
+  const clearFilter = () => {
+    setFilteredDate(''); 
+    setSelectedDate(''); 
+  };
 
   return (
     <View style={styles.container}>
@@ -76,7 +119,6 @@ export default function Home() {
             <Text style={styles.squareTextDetails2}>R$ {balanceData.entries}</Text>
           </View>
 
-
           <View style={styles.square3}>
             <Text style={styles.squareText3}>Saidas de hoje</Text>
             <Text style={styles.squareTextDetails3}>R$ {balanceData.exits}</Text>
@@ -84,46 +126,82 @@ export default function Home() {
         </ScrollView>
       </View>
 
-
-
       <View style={styles.listContainer}>
-        <TouchableOpacity
-          style={styles.fixedButton}
-          onPress={() => setShowCalendar(!showCalendar)}
-        >
-          <Image
-            source={CalendarIcon}
-            style={styles.icon}
-          />
-          <Text style={styles.buttonText}>Últimas movimentações</Text>
-        </TouchableOpacity>
-        <View>
-
-          {items.map((item) => (
-            <View key={item.id} style={styles.card}>
-              <View
-                style={[
-                  styles.badge,
-                  item.type === 'receita' ? styles.badgeReceita : styles.badgeDespesa
-                ]}
-              >
-                <Image
-                  source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
-                  style={styles.badgeIcon}
-                />
-                <Text style={styles.badgeText}>
-                  {item.type}
-                </Text>
-              </View>
-
-              <Text style={styles.value}>
-                R$ {Number(item.value).toFixed(2).replace('.', ',')}
-              </Text>
-            </View>
-          ))}
-
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <TouchableOpacity
+            style={styles.fixedButton}
+            onPress={() => setShowCalendar(!showCalendar)}
+          >
+            <Image
+              source={CalendarIcon}
+              style={styles.icon}
+            />
+            <Text style={styles.buttonText}>Últimas movimentações</Text>
+          </TouchableOpacity>
+          
+          {filteredDate && (
+            <TouchableOpacity
+              onPress={clearFilter}
+              style={{ padding: 8, backgroundColor: '#ff6b6b', borderRadius: 5, marginLeft: 10 }}
+            >
+              <Text style={{ color: 'white', fontSize: 12 }}>Limpar Filtro</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
+        {filteredDate ? (
+          <Text style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>
+            Mostrando itens de: {convertDateToBrazilian(filteredDate)}
+          </Text>
+        ) : (
+          <Text style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>
+            Mostrando itens de hoje: {getTodayBrazilian()}
+          </Text>
+        )}
+
+        <View>
+          {items
+            .filter(item => {
+              if (filteredDate) {
+                return item.date === convertDateToBrazilian(filteredDate);
+              }
+              return item.date === getTodayBrazilian();
+            })
+            .map((item) => (
+              <View key={item.id} style={styles.card}>
+                <View
+                  style={[
+                    styles.badge,
+                    item.type === 'receita' ? styles.badgeReceita : styles.badgeDespesa
+                  ]}
+                >
+                  <Image
+                    source={item.type === 'receita' ? SetaParaCima : SetaParaBaixo}
+                    style={styles.badgeIcon}
+                  />
+                  <Text style={styles.badgeText}>
+                    {item.type}
+                  </Text>
+                </View>
+
+                <Text style={styles.value}>
+                  R$ {Number(item.value).toFixed(2).replace('.', ',')}
+                </Text>
+              </View>
+            ))}
+            
+          {filteredDate && items.filter(item => item.date === convertDateToBrazilian(filteredDate)).length === 0 && (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>
+              Nenhuma movimentação encontrada para esta data
+            </Text>
+          )}
+          
+          {!filteredDate && items.filter(item => item.date === getTodayBrazilian()).length === 0 && (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>
+              Nenhuma movimentação hoje
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={{ flex: 1 }}>
@@ -138,16 +216,21 @@ export default function Home() {
                 <View style={styles.calendarContainer}>
                   <Calendar
                     onDayPress={(day) => {
-                      console.log('Dia selecionado:', day.dateString);
-                      setShowCalendar(false);
+                      setSelectedDate(day.dateString);
+                      console.log('Data selecionada no calendário:', day.dateString);
+                    }}
+                    markedDates={{
+                      [selectedDate]: {
+                        selected: true,
+                        selectedColor: '#4a90e2',
+                        selectedTextColor: 'white'
+                      }
                     }}
                     style={styles.calendar}
                   />
                   <TouchableOpacity
                     style={styles.calendarButton}
-                    onPress={() => {
-                      console.log('Botão dentro do calendário');
-                    }}
+                    onPress={handleFilter}
                   >
                     <Text style={styles.calendarButtonText}>Filtrar</Text>
                   </TouchableOpacity>
@@ -156,9 +239,7 @@ export default function Home() {
             </View>
           </TouchableWithoutFeedback>
         </Modal>
-
       </View>
     </View>
   )
 }
-
